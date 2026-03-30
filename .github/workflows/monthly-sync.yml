@@ -1,0 +1,44 @@
+name: Monthly Sync
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: '0 0 1 * *'
+
+jobs:
+  monthly-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Update monthly sync marker
+        id: update
+        run: |
+          mkdir -p monthly-sync
+          echo "Last sync: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" > monthly-sync/last-sync.txt
+          git add monthly-sync/last-sync.txt
+          if git diff --cached --quiet; then
+            echo "changes=false" >> $GITHUB_OUTPUT
+          else
+            git commit -m "Monthly sync update: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+            git push origin HEAD:refs/heads/monthly-sync
+            echo "changes=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create or update pull request
+        if: steps.update.outputs.changes == 'true'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: monthly-sync
+          base: ${{ github.event.repository.default_branch }}
+          title: "Monthly Sync update"
+          body: "Automated monthly sync to keep the repository active for the E5 Developer tenant."
+          labels: monthly-sync
