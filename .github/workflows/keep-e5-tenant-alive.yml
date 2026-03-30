@@ -1,0 +1,19 @@
+name: Keep E5 Tenant Alive
+
+on:
+  workflow_dispatch: {}
+  push: {}
+  schedule:
+    - cron: '0 */12 * * *'
+
+jobs:
+  keep-tenant-alive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call API with client secret
+        env:
+          CLIENT_SECRET: ${{ secrets.Monthly }}
+        run: |
+          curl -X POST "https://login.microsoftonline.com/385ad15b-9f07-44e1-abcb-b50308d707c3/oauth2/v2.0/token" \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -d "client_secret=$CLIENT_SECRET"
